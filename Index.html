@@ -200,7 +200,14 @@ async function handleBarcode(code){
     "4005900435699":{name:"NIVEA Protect & Moisture Sunscreen SPF50+ 300mL",cat:"Personal Care"},
      "9300617065074":{name:"Cadbury Dairy Milk Top Deck 180g",cat:"Confectionery"}
   };
-  if(!b[code]&&builtIn[code]){b[code]={...builtIn[code],lastPrice:0};localStorage.setItem(BARKEY,JSON.stringify(b))}
+  // Built-in product data is authoritative for known barcodes. This also
+  // repairs older saved entries that may have the wrong category (for example
+  // an earlier version saved Top Deck as Other). Preserve the user's last price.
+  if(builtIn[code]){
+    const old=b[code]||{};
+    b[code]={...old,...builtIn[code],lastPrice:Number(old.lastPrice)||0};
+    localStorage.setItem(BARKEY,JSON.stringify(b));
+  }
 
   if(b[code]){
     const p=b[code],pr=await askPrice(p.name,p.lastPrice||0);
@@ -234,6 +241,17 @@ async function handleBarcode(code){
   }
 }
 async function shareList(){let text="My Grocery List\n"+items.filter(i=>!i.done).map(i=>"- "+i.name+(i.price?" $"+Number(i.price).toFixed(2):"")).join("\n");if(navigator.share){try{await navigator.share({title:"My Grocery List",text})}catch(e){}}else{try{await navigator.clipboard.writeText(text);alert("List copied.")}catch(e){}}}
+// Repair categories on items saved by older versions.
+(function repairKnownProducts(){
+  const builtIn={
+    "5025970023243":{name:"NIVEA MEN Sensitive Shaving Gel 200mL",cat:"Personal Care"},
+    "4005900435699":{name:"NIVEA Protect & Moisture Sunscreen SPF50+ 300mL",cat:"Personal Care"},
+    "9300617065074":{name:"Cadbury Dairy Milk Top Deck 180g",cat:"Confectionery"}
+  };
+  let changed=false;
+  items.forEach(i=>{if(i.barcode&&builtIn[i.barcode]){i.name=builtIn[i.barcode].name;i.cat=builtIn[i.barcode].cat;changed=true;}});
+  if(changed)localStorage.setItem(KEY,JSON.stringify(items));
+})();
 render();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 </script></body></html>
