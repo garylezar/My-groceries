@@ -134,10 +134,24 @@ function askPrice(name,last){
 }
 function confirmPrice(){
   if(!priceResolve)return;
-  const input=document.getElementById("priceInput"),raw=input.value.trim();
-  const value=raw===""?priceLast:Math.max(0,parseFloat(raw)||0);
-  const resolve=priceResolve;priceResolve=null;priceProduct=null;priceLast=0;
-  document.getElementById("priceModal").classList.add("hidden");resolve(value);
+  const input=document.getElementById("priceInput");
+  const raw=String(input.value||"").trim().replace(/[$,]/g,"");
+  let value;
+  if(raw===""){
+    value=Number(priceLast)||0;
+  }else{
+    const parsed=Number.parseFloat(raw);
+    if(!Number.isFinite(parsed)||parsed<0){
+      input.focus();
+      input.select();
+      return;
+    }
+    value=Math.round(parsed*100)/100;
+  }
+  const resolve=priceResolve;
+  priceResolve=null;priceProduct=null;priceLast=0;
+  document.getElementById("priceModal").classList.add("hidden");
+  resolve(value);
 }
 function cancelPrice(){
   if(!priceResolve)return;
@@ -167,6 +181,17 @@ function categoryFor(p){
   return "Other";
 }
 
+function addScannedProduct(code,name,cat,priceValue,b){
+  const numericPrice=Math.round((Number(priceValue)||0)*100)/100;
+  const item={id:Date.now()+Math.random(),name:String(name),cat:cat||"Other",price:numericPrice,done:false,barcode:code};
+  items.push(item);
+  b[code]={...(b[code]||{}),name:item.name,cat:item.cat,lastPrice:numericPrice};
+  localStorage.setItem(BARKEY,JSON.stringify(b));
+  localStorage.setItem(KEY,JSON.stringify(items));
+  render();
+  setScanStatus("Added "+item.name+" — $"+numericPrice.toFixed(2)+". Point the camera at the next barcode…");
+}
+
 async function handleBarcode(code){
   setScanStatus("Barcode "+code+" found…");
   const b=getBarcodes();
@@ -180,9 +205,8 @@ async function handleBarcode(code){
   if(b[code]){
     const p=b[code],pr=await askPrice(p.name,p.lastPrice||0);
     if(pr===null){finishScan("Scan cancelled. Point the camera at another barcode…");return}
-    items.push({id:Date.now()+Math.random(),name:p.name,cat:p.cat||"Other",price:pr,done:false,barcode:code});
-    b[code]={...p,lastPrice:pr};localStorage.setItem(BARKEY,JSON.stringify(b));save();
-    finishScan("Added! Point the camera at the next barcode…");return;
+    addScannedProduct(code,p.name,p.cat,pr,b);
+    finishScan("Added "+p.name+" — $"+Number(pr).toFixed(2)+". Point the camera at the next barcode…");return;
   }
 
   try{
@@ -194,9 +218,8 @@ async function handleBarcode(code){
        if(catSelect)catSelect.value=cat;
        const pr=await askPrice(name,0);
       if(pr===null){finishScan("Scan cancelled. Point the camera at another barcode…");return}
-      items.push({id:Date.now()+Math.random(),name,cat,price:pr,done:false,barcode:code});
-      b[code]={name,cat,lastPrice:pr};localStorage.setItem(BARKEY,JSON.stringify(b));save();
-      finishScan("Added! Point the camera at the next barcode…");return;
+      addScannedProduct(code,name,cat,pr,b);
+      finishScan("Added "+name+" — $"+Number(pr).toFixed(2)+". Point the camera at the next barcode…");return;
     }
     pendingBarcode=code;
     const input=document.getElementById("itemInput");input.value="";input.focus();
