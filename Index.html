@@ -20,7 +20,7 @@ footer{position:fixed;left:0;right:0;bottom:0;background:rgba(246,243,237,.96);p
 <header><div><h1>🛒 My Groceries</h1><div class="sub">Scan, shop and keep your running total</div></div><button class="icon" onclick="resetAll()">↺</button></header>
 <div class="stats"><div class="stat"><b id="count">0</b><span>items left</span></div><div class="stat"><b id="budget">$0.00</b><span>shop total</span></div></div>
 <div class="add"><input id="itemInput" placeholder="Add grocery item…" onkeydown="if(event.key==='Enter')addItem()">
-<select id="cat"><option>Fruit & Veg</option><option>Meat</option><option>Dairy</option><option>Bakery</option><option>Pantry</option><option>Frozen</option><option>Drinks</option><option>Household</option><option>Other</option></select><button onclick="addItem()">+</button></div>
+<select id="cat"><option>Fruit & Veg</option><option>Meat</option><option>Dairy</option><option>Bakery</option><option>Pantry</option><option>Frozen</option><option>Drinks</option><option>Household</option><option>Confectionery</option><option>Personal Care</option><option>Other</option></select><button onclick="addItem()">+</button></div>
 <button class="scan" onclick="openScanner()">📷 Scan barcode</button>
 <div id="scanner" class="scanner hidden"><div class="scanTop"><b>Scan product</b><button class="icon" onclick="closeScanner()">✕</button></div>
 <video id="video" playsinline muted></video><div id="scanStatus">Point the camera at a barcode.</div><button class="secondary" onclick="stopScanner()">Stop camera</button></div>
@@ -129,6 +129,8 @@ function categoryFor(p){
   if(/frozen/.test(tags))return "Frozen";
   if(/drink|beverage|water|juice/.test(tags))return "Drinks";
   if(/household|cleaning|paper|hygiene/.test(tags))return "Household";
+  if(/confectionery|chocolate|candy|sweets|sweet/.test(tags))return "Confectionery";
+  if(/personal care|cosmetic|shaving|sunscreen|skin care|skincare/.test(tags))return "Personal Care";
   if(/pasta|rice|cereal|sauce|snack|pantry|canned/.test(tags))return "Pantry";
   return "Other";
 }
@@ -138,7 +140,8 @@ async function handleBarcode(code){
   const b=getBarcodes();
   const builtIn={
     "5025970023243":{name:"NIVEA MEN Sensitive Shaving Gel 200mL",cat:"Other"},
-    "4005900435699":{name:"NIVEA Protect & Moisture Sunscreen SPF50+ 300mL",cat:"Other"}
+    "4005900435699":{name:"NIVEA Protect & Moisture Sunscreen SPF50+ 300mL",cat:"Personal Care"},
+     "9300617065074":{name:"Cadbury Dairy Milk Top Deck 180g",cat:"Confectionery"}
   };
   if(!b[code]&&builtIn[code]){b[code]={...builtIn[code],lastPrice:0};localStorage.setItem(BARKEY,JSON.stringify(b))}
 
@@ -154,7 +157,10 @@ async function handleBarcode(code){
     setScanStatus("Looking up product…");
     const p=await lookupOFF(code);
     if(p){
-      const name=p.product_name||p.product_name_en||p.generic_name||("Barcode "+code),cat=categoryFor(p),pr=askPrice(name,0);
+      const name=p.product_name||p.product_name_en||p.generic_name||("Barcode "+code),cat=categoryFor(p);
+       const catSelect=document.getElementById("cat");
+       if(catSelect)catSelect.value=cat;
+       const pr=askPrice(name,0);
       if(pr===null){finishScan("Scan cancelled. Point the camera at another barcode…");return}
       items.push({id:Date.now()+Math.random(),name,cat,price:pr,done:false,barcode:code});
       b[code]={name,cat,lastPrice:pr};localStorage.setItem(BARKEY,JSON.stringify(b));save();
@@ -175,4 +181,4 @@ async function handleBarcode(code){
 async function shareList(){let text="My Grocery List\n"+items.filter(i=>!i.done).map(i=>"- "+i.name+(i.price?" $"+Number(i.price).toFixed(2):"")).join("\n");if(navigator.share){try{await navigator.share({title:"My Grocery List",text})}catch(e){}}else{try{await navigator.clipboard.writeText(text);alert("List copied.")}catch(e){}}}
 render();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
-</script></script></body></html>
+</script></body></html>
