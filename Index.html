@@ -16,6 +16,8 @@ video{width:100%;height:260px;object-fit:cover;border-radius:12px;background:#11
 .check{width:25px;height:25px;border-radius:50%;border:2px solid #bdb7ad;display:grid;place-items:center;flex:none;color:white}.done .check{background:var(--accent);border-color:var(--accent)}.name{flex:1}.done .name{text-decoration:line-through}.price{width:78px;padding:9px!important;font-size:14px!important}.del{background:transparent;color:var(--danger);padding:6px}
 .actions{display:flex;gap:8px;margin-top:12px}.secondary{background:white;color:var(--ink);border:1px solid var(--line)}.empty{text-align:center;color:var(--muted);padding:30px 10px}
 footer{position:fixed;left:0;right:0;bottom:0;background:rgba(246,243,237,.96);padding:10px 16px env(safe-area-inset-bottom);border-top:1px solid var(--line)}.footerin{max-width:620px;margin:auto;display:flex;justify-content:space-between;align-items:center}.total small{color:var(--muted);display:block}.total b{font-size:22px}
+
+.priceModal{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:flex-end;justify-content:center;padding:16px;z-index:9999}.priceCard{width:100%;max-width:520px;background:white;border-radius:22px;padding:22px;box-shadow:0 10px 40px rgba(0,0,0,.25)}.priceCard h3{margin:0 0 7px;font-size:22px}.priceCard p{margin:0 0 16px;color:var(--muted);line-height:1.45}.priceCard input{font-size:20px;padding:14px;margin-bottom:14px}.priceBtns{display:flex;justify-content:flex-end;gap:10px}.priceBtns button{min-width:92px}.priceModal.hidden{display:none}
 </style></head><body><div class="app">
 <header><div><h1>🛒 My Groceries</h1><div class="sub">Scan, shop and keep your running total</div></div><button class="icon" onclick="resetAll()">↺</button></header>
 <div class="stats"><div class="stat"><b id="count">0</b><span>items left</span></div><div class="stat"><b id="budget">$0.00</b><span>shop total</span></div></div>
@@ -24,11 +26,12 @@ footer{position:fixed;left:0;right:0;bottom:0;background:rgba(246,243,237,.96);p
 <button class="scan" onclick="openScanner()">📷 Scan barcode</button>
 <div id="scanner" class="scanner hidden"><div class="scanTop"><b>Scan product</b><button class="icon" onclick="closeScanner()">✕</button></div>
 <video id="video" playsinline muted></video><div id="scanStatus">Point the camera at a barcode.</div><button class="secondary" onclick="stopScanner()">Stop camera</button></div>
+<div id="priceModal" class="priceModal hidden" role="dialog" aria-modal="true" aria-labelledby="priceTitle"><div class="priceCard"><h3 id="priceTitle">Add product</h3><p id="priceText"></p><input id="priceInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"><div class="priceBtns"><button class="secondary" onclick="cancelPrice()">Cancel</button><button onclick="confirmPrice()">Add item</button></div></div></div>
 <div id="list"></div><div class="actions"><button onclick="loadWeekly()">⭐ Weekly Shop</button><button class="secondary" onclick="clearDone()">Clear purchased</button></div></div>
 <footer><div class="footerin"><div class="total"><small>RUNNING TOTAL</small><b id="total">$0.00</b></div><button onclick="shareList()">Share list</button></div></footer>
 <script>
 const KEY="my-grocery-v3",BARKEY="my-grocery-barcodes-v3";
-let items=JSON.parse(localStorage.getItem(KEY)||"[]"),pendingBarcode=null,scanBusy=false,lastScan=null;
+let items=JSON.parse(localStorage.getItem(KEY)||"[]"),pendingBarcode=null,scanBusy=false,lastScan=null,lastScanAt=0,priceResolve=null,priceProduct=null,priceLast=0;
 let zxingReader=null,zxingControls=null;
 const weekly=[["Milk","Dairy"],["Bread","Bakery"],["Eggs","Dairy"],["Bananas","Fruit & Veg"],["Chicken","Meat"],["Cheese","Dairy"],["Yoghurt","Dairy"],["Potatoes","Fruit & Veg"],["Tomatoes","Fruit & Veg"],["Rice","Pantry"],["Pasta","Pantry"],["Frozen vegetables","Frozen"],["Toilet paper","Household"]];
 function save(){localStorage.setItem(KEY,JSON.stringify(items));render()}
@@ -72,13 +75,16 @@ async function openScanner(){
       if(formats.length)hints.set(window.ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS,formats);
       if(window.ZXingBrowser.DecodeHintType.TRY_HARDER)hints.set(window.ZXingBrowser.DecodeHintType.TRY_HARDER,true);
     }
-    zxingReader=new ZXingBrowser.BrowserMultiFormatReader(hints,{delayBetweenScanAttempts:150,delayBetweenScanSuccess:800});
+    zxingReader=new ZXingBrowser.BrowserMultiFormatReader(hints,{delayBetweenScanAttempts:100,delayBetweenScanSuccess:250});
     const constraints={audio:false,video:{facingMode:{ideal:"environment"},width:{ideal:1280,min:640},height:{ideal:720,min:480}}};
     zxingControls=await zxingReader.decodeFromConstraints(constraints,video,(result,error,controls)=>{
       if(controls && !zxingControls)zxingControls=controls;
       if(result && !scanBusy){
         const code=String(result.getText()||"").replace(/\s+/g,"").trim();
-        if(code){lastScan=code;scanBusy=true;handleBarcode(code);}
+        const now=Date.now();
+        if(code && (code!==lastScan || now-lastScanAt>1800)){
+          lastScan=code;lastScanAt=now;scanBusy=true;handleBarcode(code);
+        }
       }
     });
     try{video.setAttribute("playsinline","");video.muted=true;await video.play()}catch(e){}
@@ -95,24 +101,50 @@ async function openScanner(){
 }
 
 function stopScanner(){
+  if(priceResolve){priceResolve(null);priceResolve=null;priceProduct=null}
+  const pm=document.getElementById("priceModal");if(pm)pm.classList.add("hidden");
   try{zxingControls?.stop()}catch(e){}
   zxingControls=null;
   try{zxingReader?.reset()}catch(e){}
   zxingReader=null;
   const v=document.getElementById("video");
   if(v){try{v.pause()}catch(e){};v.srcObject=null}
-  scanBusy=false;lastScan=null;
+  scanBusy=false;lastScan=null;lastScanAt=0;
   setScanStatus("Camera stopped. Tap Scan barcode to start again.");
 }
 function closeScanner(){stopScanner();document.getElementById("scanner").classList.add("hidden")}
 
-function finishScan(message){scanBusy=false;lastScan=null;setScanStatus(message||"Point the camera at a product barcode…")}
-function askPrice(name,last){
-  const initial=last?Number(last).toFixed(2):"";
-  const v=prompt("Price for "+name+(last?"\nLast price: $"+Number(last).toFixed(2):"")+"\n\nEnter current price, or leave blank for $0:",initial);
-  if(v===null)return null;
-  return v.trim()===""?(last||0):Math.max(0,parseFloat(v)||0);
+function finishScan(message){
+  setScanStatus(message||"Point the camera at a product barcode…");
+  const code=lastScan;
+  setTimeout(()=>{
+    scanBusy=false;
+    if(code===lastScan)lastScanAt=Date.now();
+  },650);
 }
+function askPrice(name,last){
+  return new Promise(resolve=>{
+    priceResolve=resolve;priceProduct=name;priceLast=Number(last)||0;
+    document.getElementById("priceTitle").textContent="Add "+name;
+    document.getElementById("priceText").textContent=priceLast?"Last price: $"+priceLast.toFixed(2)+"\n\nEnter the current price, or leave blank to use the last price.":"Enter the current price, or leave blank to add it at $0.00.";
+    const input=document.getElementById("priceInput");input.value=priceLast?priceLast.toFixed(2):"";
+    document.getElementById("priceModal").classList.remove("hidden");
+    setTimeout(()=>{input.focus();input.select()},50);
+  });
+}
+function confirmPrice(){
+  if(!priceResolve)return;
+  const input=document.getElementById("priceInput"),raw=input.value.trim();
+  const value=raw===""?priceLast:Math.max(0,parseFloat(raw)||0);
+  const resolve=priceResolve;priceResolve=null;priceProduct=null;priceLast=0;
+  document.getElementById("priceModal").classList.add("hidden");resolve(value);
+}
+function cancelPrice(){
+  if(!priceResolve)return;
+  const resolve=priceResolve;priceResolve=null;priceProduct=null;priceLast=0;
+  document.getElementById("priceModal").classList.add("hidden");resolve(null);
+}
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&priceResolve)confirmPrice();if(e.key==="Escape"&&priceResolve)cancelPrice()});
 async function lookupOFF(code){
   const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),7000);
   try{
@@ -139,14 +171,14 @@ async function handleBarcode(code){
   setScanStatus("Barcode "+code+" found…");
   const b=getBarcodes();
   const builtIn={
-    "5025970023243":{name:"NIVEA MEN Sensitive Shaving Gel 200mL",cat:"Other"},
+    "5025970023243":{name:"NIVEA MEN Sensitive Shaving Gel 200mL",cat:"Personal Care"},
     "4005900435699":{name:"NIVEA Protect & Moisture Sunscreen SPF50+ 300mL",cat:"Personal Care"},
      "9300617065074":{name:"Cadbury Dairy Milk Top Deck 180g",cat:"Confectionery"}
   };
   if(!b[code]&&builtIn[code]){b[code]={...builtIn[code],lastPrice:0};localStorage.setItem(BARKEY,JSON.stringify(b))}
 
   if(b[code]){
-    const p=b[code],pr=askPrice(p.name,p.lastPrice||0);
+    const p=b[code],pr=await askPrice(p.name,p.lastPrice||0);
     if(pr===null){finishScan("Scan cancelled. Point the camera at another barcode…");return}
     items.push({id:Date.now()+Math.random(),name:p.name,cat:p.cat||"Other",price:pr,done:false,barcode:code});
     b[code]={...p,lastPrice:pr};localStorage.setItem(BARKEY,JSON.stringify(b));save();
@@ -160,7 +192,7 @@ async function handleBarcode(code){
       const name=p.product_name||p.product_name_en||p.generic_name||("Barcode "+code),cat=categoryFor(p);
        const catSelect=document.getElementById("cat");
        if(catSelect)catSelect.value=cat;
-       const pr=askPrice(name,0);
+       const pr=await askPrice(name,0);
       if(pr===null){finishScan("Scan cancelled. Point the camera at another barcode…");return}
       items.push({id:Date.now()+Math.random(),name,cat,price:pr,done:false,barcode:code});
       b[code]={name,cat,lastPrice:pr};localStorage.setItem(BARKEY,JSON.stringify(b));save();
