@@ -52,7 +52,7 @@ function loadWeekly(){let s=new Set(items.map(i=>i.name.toLowerCase()));weekly.f
 function clearDone(){items=items.filter(i=>!i.done);save()}
 function resetAll(){if(confirm("Start a new grocery list?")){items=[];save()}}
 function calc(){let t=items.reduce((s,i)=>s+(Number(i.price)||0),0);document.getElementById("count").textContent=items.filter(i=>!i.done).length;document.getElementById("budget").textContent="$"+t.toFixed(2);document.getElementById("total").textContent="$"+t.toFixed(2)}
-function render(){let r=document.getElementById("list");r.innerHTML="";if(!items.length){r.innerHTML='<div class="empty">Your list is empty.<br>Use +, Weekly Shop, or scan a barcode.</div>';calc();return}let cats=[...new Set(items.map(i=>i.cat))];cats.forEach(c=>{let sec=document.createElement("div");sec.className="section";sec.innerHTML="<h2>"+esc(c)+"</h2>";items.filter(i=>i.cat===c).sort((a,b)=>a.done-b.done).forEach(i=>{let row=document.createElement("div");row.className="item "+(i.done?"done":"");row.innerHTML='<div class="check" onclick="toggle('+i.id+')">'+(i.done?"✓":"")+'</div><div class="name">'+esc(i.name)+'</div><input class="price" type="number" min="0" step=".01" placeholder="$0" value="'+(i.price||"")+'" onchange="price('+i.id+',this.value)"><button class="del" onclick="del('+i.id+')">×</button>';sec.appendChild(row)});r.appendChild(sec)});calc()}
+function render(){let r=document.getElementById("list");r.innerHTML="";if(!items.length){r.innerHTML='<div class="empty">Your list is empty.<br>Use +, Weekly Shop, or scan a barcode.</div>';calc();return}let cats=[...new Set(items.map(i=>i.cat))];cats.forEach(c=>{let sec=document.createElement("div");sec.className="section";sec.innerHTML="<h2>"+esc(c)+"</h2>";items.filter(i=>i.cat===c).sort((a,b)=>a.done-b.done).forEach(i=>{let row=document.createElement("div");row.className="item "+(i.done?"done":"");row.innerHTML='<div class="check" onclick="toggle('+i.id+')">'+(i.done?"✓":"")+'</div><div class="name">'+esc(i.name)+'</div><input class="price" type="number" min="0" step=".01" placeholder="Enter price" value="'+(i.price||"")+'" onchange="price('+i.id+',this.value)"><button class="del" onclick="del('+i.id+')">×</button>';sec.appendChild(row)});r.appendChild(sec)});calc()}
 
 function setScanStatus(text){const el=document.getElementById("scanStatus");if(el)el.textContent=text}
 function scannerIsRunning(){return !!zxingControls}
@@ -126,7 +126,7 @@ function askPrice(name,last){
   return new Promise(resolve=>{
     priceResolve=resolve;priceProduct=name;priceLast=Number(last)||0;
     document.getElementById("priceTitle").textContent="Add "+name;
-    document.getElementById("priceText").textContent=priceLast?"Last price: $"+priceLast.toFixed(2)+"\n\nEnter the current price, or leave blank to use the last price.":"Enter the current price, or leave blank to add it at $0.00.";
+    document.getElementById("priceText").textContent=priceLast?"Last price: $"+priceLast.toFixed(2)+"\n\nEnter the current price, or leave blank to use the last price.":"Enter the current price. A price is required for a new scanned product.";
     const input=document.getElementById("priceInput");input.value=priceLast?priceLast.toFixed(2):"";
     document.getElementById("priceModal").classList.remove("hidden");
     setTimeout(()=>{input.focus();input.select()},50);
@@ -138,7 +138,13 @@ function confirmPrice(){
   const raw=String(input.value||"").trim().replace(/[$,]/g,"");
   let value;
   if(raw===""){
-    value=Number(priceLast)||0;
+    if(Number(priceLast)>0){
+      value=Math.round(Number(priceLast)*100)/100;
+    }else{
+      input.focus();
+      input.placeholder="Enter a price";
+      return;
+    }
   }else{
     const parsed=Number.parseFloat(raw);
     if(!Number.isFinite(parsed)||parsed<0){
@@ -241,15 +247,27 @@ async function handleBarcode(code){
   }
 }
 async function shareList(){let text="My Grocery List\n"+items.filter(i=>!i.done).map(i=>"- "+i.name+(i.price?" $"+Number(i.price).toFixed(2):"")).join("\n");if(navigator.share){try{await navigator.share({title:"My Grocery List",text})}catch(e){}}else{try{await navigator.clipboard.writeText(text);alert("List copied.")}catch(e){}}}
-// Repair categories on items saved by older versions.
+// Repair known products and restore prices that were already remembered by barcode.
 (function repairKnownProducts(){
   const builtIn={
     "5025970023243":{name:"NIVEA MEN Sensitive Shaving Gel 200mL",cat:"Personal Care"},
     "4005900435699":{name:"NIVEA Protect & Moisture Sunscreen SPF50+ 300mL",cat:"Personal Care"},
     "9300617065074":{name:"Cadbury Dairy Milk Top Deck 180g",cat:"Confectionery"}
   };
+  const b=getBarcodes();
   let changed=false;
-  items.forEach(i=>{if(i.barcode&&builtIn[i.barcode]){i.name=builtIn[i.barcode].name;i.cat=builtIn[i.barcode].cat;changed=true;}});
+  items.forEach(i=>{
+    if(i.barcode&&builtIn[i.barcode]){
+      if(i.name!==builtIn[i.barcode].name){i.name=builtIn[i.barcode].name;changed=true}
+      if(i.cat!==builtIn[i.barcode].cat){i.cat=builtIn[i.barcode].cat;changed=true}
+      const remembered=Number(b[i.barcode]?.lastPrice)||0;
+      if((Number(i.price)||0)===0 && remembered>0){i.price=remembered;changed=true}
+      else if((Number(i.price)||0)===0 && remembered>0){i.price=remembered;changed=true}
+    }else if(i.barcode){
+      const remembered=Number(b[i.barcode]?.lastPrice)||0;
+      if((Number(i.price)||0)===0 && remembered>0){i.price=remembered;changed=true}
+    }
+  });
   if(changed)localStorage.setItem(KEY,JSON.stringify(items));
 })();
 render();
