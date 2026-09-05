@@ -1,0 +1,279 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#294b3a"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="My Groceries"><link rel="manifest" href="manifest.webmanifest">
+<title>My Groceries</title><script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
+<style>
+:root{--bg:#f5f7f3;--card:#fff;--ink:#14221a;--muted:#77837c;--line:#e3e9e4;--accent:#174a31;--accent2:#2f7651;--soft:#e8f2eb;--soft2:#f1f6f2;--danger:#b6534b;--gold:#d6a63b;--shadow:0 12px 32px rgba(20,50,34,.075);--shadow2:0 18px 45px rgba(20,50,34,.12)}
+*{box-sizing:border-box}html{background:var(--bg)}body{margin:0;background:radial-gradient(circle at 90% 0,#e9f2ec 0,transparent 28%),linear-gradient(180deg,#f0f5f1 0,#f7f8f5 330px,var(--bg) 700px);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}button,input,select{font:inherit}button{border:0;cursor:pointer}.app{max-width:700px;margin:auto;padding:18px 16px 155px}
+header{display:flex;justify-content:space-between;align-items:center;margin:4px 0 22px}.brand{display:flex;align-items:center;gap:12px}.brandMark{width:50px;height:50px;border-radius:17px;background:linear-gradient(145deg,#1c5639,#123b28);display:grid;place-items:center;color:white;font-size:25px;box-shadow:0 10px 22px rgba(23,74,49,.22)}h1{font-size:29px;letter-spacing:-1px;margin:0;font-weight:850}.sub{color:var(--muted);font-size:14px;margin-top:4px;font-weight:550}.icon{width:46px;height:46px;border-radius:16px;background:rgba(255,255,255,.88);color:var(--ink);border:1px solid var(--line);box-shadow:0 7px 20px rgba(0,0,0,.045);padding:0;font-size:20px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}.stat{position:relative;overflow:hidden;background:rgba(255,255,255,.92);border:1px solid rgba(227,233,228,.95);border-radius:24px;padding:17px 18px 16px;box-shadow:var(--shadow)}.statTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}.statIcon{width:32px;height:32px;border-radius:11px;background:var(--soft);display:grid;place-items:center;font-size:16px}.stat b{display:block;font-size:29px;letter-spacing:-.9px}.stat span{display:block;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.2px}.stat:after{content:"";position:absolute;width:88px;height:88px;border-radius:50%;right:-35px;top:-38px;background:rgba(232,242,235,.72)}
+.addCard{background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:22px;padding:8px;box-shadow:var(--shadow);display:grid;grid-template-columns:1fr 52px;gap:8px}.addCard input{border:0;background:var(--soft2);border-radius:16px;padding:14px 14px;font-size:16px;min-width:0;outline:none}.addCard input:focus{box-shadow:0 0 0 3px rgba(47,118,81,.13)}.addCard select{display:none}.addCard .addBtn{border-radius:16px;background:var(--accent);color:#fff;font-size:25px;font-weight:500;box-shadow:0 8px 17px rgba(23,74,49,.18)}
+.categoryRail{display:flex;gap:8px;overflow-x:auto;padding:9px 2px 3px;margin-bottom:5px;scrollbar-width:none}.categoryRail::-webkit-scrollbar{display:none}.catChip{flex:0 0 auto;background:rgba(255,255,255,.82);color:#56645c;border:1px solid var(--line);border-radius:999px;padding:9px 12px;font-size:13px;font-weight:750;white-space:nowrap}.catChip.active{background:var(--soft);color:var(--accent);border-color:#c9dccf}
+.scan{width:100%;margin:11px 0 18px;border-radius:21px;padding:16px 18px;background:linear-gradient(135deg,#194d33,#286644);color:white;font-size:17px;font-weight:850;letter-spacing:.05px;box-shadow:0 12px 25px rgba(23,74,49,.23);display:flex;align-items:center;justify-content:center;gap:10px}.scan .scanIcon{width:30px;height:30px;border-radius:10px;background:rgba(255,255,255,.13);display:grid;place-items:center}.scan:active{transform:scale(.99)}
+.scanner{background:#0d1511;border:1px solid #26362c;border-radius:25px;padding:12px;margin:0 0 20px;box-shadow:var(--shadow2)}.scanner .scanTop{color:white;padding:3px 2px 6px}.scanner .scanTop b{font-size:17px}.scanner .icon{background:#243029;color:white;border-color:#34453b}.hidden{display:none}.scanTop{display:flex;justify-content:space-between;align-items:center}.scanner video{width:100%;height:285px;object-fit:cover;border-radius:18px;background:#050806;margin-top:7px}.scanner #scanStatus{text-align:center;color:#c4cec8;font-size:13px;padding:11px 8px 9px}.scanner .secondary{background:#fff;color:var(--ink);border:0;width:100%;border-radius:14px;padding:12px}
+.section{margin-top:25px}.section h2{font-size:13px;margin:0 0 9px;color:#637169;text-transform:uppercase;letter-spacing:1.25px;font-weight:850;display:flex;align-items:center;gap:8px}.section h2:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent2)}.item{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);padding:11px 11px 11px 12px;border-radius:20px;margin:8px 0;box-shadow:0 7px 20px rgba(20,50,34,.055);min-height:66px}.item.done{opacity:.5}.check{width:31px;height:31px;border-radius:50%;border:2px solid #c9d3cc;display:grid;place-items:center;flex:none;color:white;font-size:17px;font-weight:850}.done .check{background:var(--accent);border-color:var(--accent)}.name{flex:1;min-width:0;font-size:16px;font-weight:700;line-height:1.25}.done .name{text-decoration:line-through}.price{width:88px!important;padding:10px 9px!important;font-size:15px!important;font-weight:800!important;text-align:right;border:1px solid var(--line)!important;background:#f7faf8!important;border-radius:14px!important;outline:none}.price:focus{border-color:#9bb9a5!important;box-shadow:0 0 0 3px rgba(47,118,81,.1)}.del{background:transparent;color:var(--danger);padding:6px;font-size:21px;font-weight:500}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}.actions button{padding:13px 12px;border-radius:16px;font-size:14px;font-weight:800}.secondary{background:white;color:var(--ink);border:1px solid var(--line)}.actions button:first-child{background:var(--accent);color:white;box-shadow:0 8px 18px rgba(23,74,49,.14)}.empty{text-align:center;color:var(--muted);padding:38px 15px;background:rgba(255,255,255,.68);border:1px dashed #d7dfd9;border-radius:24px;margin-top:23px}.emptyIcon{width:58px;height:58px;margin:0 auto 12px;border-radius:19px;background:var(--soft);display:grid;place-items:center;font-size:27px}.empty strong{display:block;color:var(--ink);font-size:18px;margin-bottom:5px}.empty span{display:block;font-size:14px;line-height:1.45}
+footer{position:fixed;left:0;right:0;bottom:0;background:rgba(247,249,246,.91);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(210,220,213,.82);z-index:100}.footerin{max-width:680px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:12px}.total small{color:var(--muted);display:block;font-size:10px;letter-spacing:1.25px;font-weight:850}.total b{font-size:29px;letter-spacing:-.8px}.footerin>button{background:var(--accent);color:#fff;border-radius:16px;padding:13px 18px;font-weight:850;box-shadow:0 8px 18px rgba(23,74,49,.16)}
+.priceModal{position:fixed;inset:0;background:rgba(10,18,13,.48);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);display:flex;align-items:flex-end;justify-content:center;padding:14px;z-index:9999}.priceCard{width:100%;max-width:520px;background:white;border-radius:29px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.28)}.priceCard h3{margin:0 0 7px;font-size:23px;letter-spacing:-.4px}.priceCard p{margin:0 0 17px;color:var(--muted);line-height:1.45;white-space:pre-line}.priceCard input{font-size:24px!important;padding:15px!important;margin-bottom:14px;background:#f7f9f7!important;border:1px solid var(--line)!important;border-radius:15px!important}.priceBtns{display:flex;justify-content:flex-end;gap:10px}.priceBtns button{min-width:100px;border-radius:14px;padding:13px 16px}.priceModal.hidden{display:none}
+@media(max-width:430px){.app{padding-left:13px;padding-right:13px}.brandMark{width:45px;height:45px;border-radius:15px}h1{font-size:27px}.stat b{font-size:27px}.item{padding-left:10px}.name{font-size:15.5px}.price{width:84px!important}.catChip{padding:8px 11px;font-size:12.5px}}
+</style></head><body><div class="app">
+<header><div class="brand"><div class="brandMark">🛒</div><div><h1>My Groceries</h1><div class="sub">Smart shopping, made simple</div></div></div><button class="icon" onclick="resetAll()" aria-label="Start a new list">↺</button></header>
+<div class="stats"><div class="stat"><div class="statTop"><span class="statIcon">✓</span></div><b id="count">0</b><span>items left</span></div><div class="stat"><div class="statTop"><span class="statIcon">$</span></div><b id="budget">$0.00</b><span>shop total</span></div></div>
+<div class="addCard"><input id="itemInput" placeholder="What do you need?" onkeydown="if(event.key==='Enter')addItem()">
+<select id="cat" aria-label="Category"><option>Fruit & Veg</option><option>Meat</option><option>Dairy</option><option>Bakery</option><option>Pantry</option><option>Frozen</option><option>Drinks</option><option>Household</option><option>Confectionery</option><option>Personal Care</option><option>Other</option></select><button class="addBtn" onclick="addItem()" aria-label="Add item">+</button></div>
+<div class="categoryRail" aria-label="Quick categories">
+<button class="catChip active" data-cat="Fruit & Veg" onclick="chooseCat('Fruit & Veg',this)">🥬 Produce</button><button class="catChip" data-cat="Meat" onclick="chooseCat('Meat',this)">🥩 Meat</button><button class="catChip" data-cat="Dairy" onclick="chooseCat('Dairy',this)">🥛 Dairy</button><button class="catChip" data-cat="Bakery" onclick="chooseCat('Bakery',this)">🥐 Bakery</button><button class="catChip" data-cat="Pantry" onclick="chooseCat('Pantry',this)">🥫 Pantry</button><button class="catChip" data-cat="Frozen" onclick="chooseCat('Frozen',this)">🧊 Frozen</button><button class="catChip" data-cat="Drinks" onclick="chooseCat('Drinks',this)">🥤 Drinks</button><button class="catChip" data-cat="Household" onclick="chooseCat('Household',this)">🧽 Home</button><button class="catChip" data-cat="Confectionery" onclick="chooseCat('Confectionery',this)">🍫 Treats</button><button class="catChip" data-cat="Personal Care" onclick="chooseCat('Personal Care',this)">🧴 Care</button>
+</div>
+<button class="scan" onclick="openScanner()"><span class="scanIcon">📷</span> Scan a product</button>
+<div id="scanner" class="scanner hidden"><div class="scanTop"><b>Scan product</b><button class="icon" onclick="closeScanner()">✕</button></div>
+<video id="video" playsinline muted></video><div id="scanStatus">Point the camera at a barcode.</div><button class="secondary" onclick="stopScanner()">Stop camera</button></div>
+<div id="priceModal" class="priceModal hidden" role="dialog" aria-modal="true" aria-labelledby="priceTitle"><div class="priceCard"><h3 id="priceTitle">Add product</h3><p id="priceText"></p><input id="priceInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"><div class="priceBtns"><button class="secondary" onclick="cancelPrice()">Cancel</button><button onclick="confirmPrice()">Add item</button></div></div></div>
+<div id="list"></div><div class="actions"><button onclick="loadWeekly()">⭐ Weekly Shop</button><button class="secondary" onclick="clearDone()">Clear purchased</button></div></div>
+<footer><div class="footerin"><div class="total"><small>RUNNING TOTAL</small><b id="total">$0.00</b></div><button onclick="shareList()">Share list</button></div></footer>
+<script>
+const KEY="my-grocery-v3",BARKEY="my-grocery-barcodes-v3";
+let items=JSON.parse(localStorage.getItem(KEY)||"[]"),pendingBarcode=null,scanBusy=false,lastScan=null,lastScanAt=0,priceResolve=null,priceProduct=null,priceLast=0;
+let zxingReader=null,zxingControls=null;
+const weekly=[["Milk","Dairy"],["Bread","Bakery"],["Eggs","Dairy"],["Bananas","Fruit & Veg"],["Chicken","Meat"],["Cheese","Dairy"],["Yoghurt","Dairy"],["Potatoes","Fruit & Veg"],["Tomatoes","Fruit & Veg"],["Rice","Pantry"],["Pasta","Pantry"],["Frozen vegetables","Frozen"],["Toilet paper","Household"]];
+function save(){localStorage.setItem(KEY,JSON.stringify(items));render()}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function getBarcodes(){try{return JSON.parse(localStorage.getItem(BARKEY)||"{}")}catch(e){return {}}}
+function chooseCat(cat,btn){const sel=document.getElementById("cat");if(sel)sel.value=cat;document.querySelectorAll(".catChip").forEach(x=>x.classList.remove("active"));if(btn)btn.classList.add("active")}
+function addItem(){
+  const el=document.getElementById("itemInput"),name=el.value.trim(); if(!name)return;
+  const cat=document.getElementById("cat").value;
+  const n={id:Date.now()+Math.random(),name,cat,price:0,done:false};
+  if(pendingBarcode){n.barcode=pendingBarcode;const b=getBarcodes();b[pendingBarcode]={name,cat,lastPrice:0};localStorage.setItem(BARKEY,JSON.stringify(b));pendingBarcode=null}
+  items.push(n);el.value="";save();
+  if(zxingControls) document.getElementById("scanStatus").textContent="Saved. Point the camera at the next barcode…";
+}
+function toggle(id){let x=items.find(i=>i.id==id);if(x)x.done=!x.done;save()}
+function del(id){items=items.filter(i=>i.id!=id);save()}
+function price(id,v){let x=items.find(i=>i.id==id);if(!x)return;x.price=Math.max(0,parseFloat(v)||0);if(x.barcode){let b=getBarcodes();b[x.barcode]={name:x.name,cat:x.cat,lastPrice:x.price};localStorage.setItem(BARKEY,JSON.stringify(b))}localStorage.setItem(KEY,JSON.stringify(items));calc()}
+function loadWeekly(){let s=new Set(items.map(i=>i.name.toLowerCase()));weekly.forEach(([n,c])=>{if(!s.has(n.toLowerCase()))items.push({id:Date.now()+Math.random(),name:n,cat:c,price:0,done:false})});save()}
+function clearDone(){items=items.filter(i=>!i.done);save()}
+function resetAll(){if(confirm("Start a new grocery list?")){items=[];save()}}
+function calc(){let t=items.reduce((s,i)=>s+(Number(i.price)||0),0);document.getElementById("count").textContent=items.filter(i=>!i.done).length;document.getElementById("budget").textContent="$"+t.toFixed(2);document.getElementById("total").textContent="$"+t.toFixed(2)}
+function render(){let r=document.getElementById("list");r.innerHTML="";if(!items.length){r.innerHTML='<div class="empty"><div class="emptyIcon">🛍️</div><strong>Ready when you are</strong><span>Scan your first product or add something manually.</span></div>';calc();return}let cats=[...new Set(items.map(i=>i.cat))];cats.forEach(c=>{let sec=document.createElement("div");sec.className="section";sec.innerHTML="<h2>"+esc(c)+"</h2>";items.filter(i=>i.cat===c).sort((a,b)=>a.done-b.done).forEach(i=>{let row=document.createElement("div");row.className="item "+(i.done?"done":"");row.innerHTML='<div class="check" onclick="toggle('+i.id+')">'+(i.done?"✓":"")+'</div><div class="name">'+esc(i.name)+'</div><input class="price" type="number" min="0" step=".01" placeholder="Enter price" value="'+(i.price||"")+'" onchange="price('+i.id+',this.value)"><button class="del" onclick="del('+i.id+')">×</button>';sec.appendChild(row)});r.appendChild(sec)});calc()}
+
+function setScanStatus(text){const el=document.getElementById("scanStatus");if(el)el.textContent=text}
+function scannerIsRunning(){return !!zxingControls}
+
+async function openScanner(){
+  const box=document.getElementById("scanner"),video=document.getElementById("video");
+  box.classList.remove("hidden");
+  if(scannerIsRunning()){setScanStatus("Point the camera at a product barcode…");return}
+  if(!window.isSecureContext){setScanStatus("Camera requires HTTPS. Open the app using its HTTPS address.");return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setScanStatus("This browser cannot access the camera.");return}
+  if(!window.ZXingBrowser){setScanStatus("Scanner library is loading. Refresh once and try again.");return}
+
+  try{
+    setScanStatus("Starting camera…");
+    if(zxingReader){try{zxingReader.reset()}catch(e){}}
+    const hints=new Map();
+    if(window.ZXingBrowser.DecodeHintType && window.ZXingBrowser.BarcodeFormat){
+      const F=window.ZXingBrowser.BarcodeFormat;
+      const formats=[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128,F.CODE_39,F.ITF,F.QR_CODE].filter(Boolean);
+      if(formats.length)hints.set(window.ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS,formats);
+      if(window.ZXingBrowser.DecodeHintType.TRY_HARDER)hints.set(window.ZXingBrowser.DecodeHintType.TRY_HARDER,true);
+    }
+    zxingReader=new ZXingBrowser.BrowserMultiFormatReader(hints,{delayBetweenScanAttempts:100,delayBetweenScanSuccess:250});
+    const constraints={audio:false,video:{facingMode:{ideal:"environment"},width:{ideal:1280,min:640},height:{ideal:720,min:480}}};
+    zxingControls=await zxingReader.decodeFromConstraints(constraints,video,(result,error,controls)=>{
+      if(controls && !zxingControls)zxingControls=controls;
+      if(result && !scanBusy){
+        const code=String(result.getText()||"").replace(/\s+/g,"").trim();
+        const now=Date.now();
+        if(code && (code!==lastScan || now-lastScanAt>1800)){
+          lastScan=code;lastScanAt=now;scanBusy=true;handleBarcode(code);
+        }
+      }
+    });
+    try{video.setAttribute("playsinline","");video.muted=true;await video.play()}catch(e){}
+    setScanStatus("Point the camera at a product barcode…");
+  }catch(e){
+    console.error("Scanner start error",e);
+    zxingControls=null;
+    try{zxingReader?.reset()}catch(x){}
+    if(e&&e.name==="NotAllowedError")setScanStatus("Camera permission was denied. Allow camera access for this site in Safari Settings.");
+    else if(e&&e.name==="NotFoundError")setScanStatus("No camera was found on this device.");
+    else if(e&&e.name==="NotReadableError")setScanStatus("The camera is busy. Close other apps using the camera, then try again.");
+    else setScanStatus("Camera could not start. Make sure the app is opened over HTTPS and camera access is allowed.");
+  }
+}
+
+function stopScanner(){
+  if(priceResolve){priceResolve(null);priceResolve=null;priceProduct=null}
+  const pm=document.getElementById("priceModal");if(pm)pm.classList.add("hidden");
+  try{zxingControls?.stop()}catch(e){}
+  zxingControls=null;
+  try{zxingReader?.reset()}catch(e){}
+  zxingReader=null;
+  const v=document.getElementById("video");
+  if(v){try{v.pause()}catch(e){};v.srcObject=null}
+  scanBusy=false;lastScan=null;lastScanAt=0;
+  setScanStatus("Camera stopped. Tap Scan barcode to start again.");
+}
+function closeScanner(){stopScanner();document.getElementById("scanner").classList.add("hidden")}
+
+function finishScan(message){
+  setScanStatus(message||"Point the camera at a product barcode…");
+  const code=lastScan;
+  setTimeout(()=>{
+    scanBusy=false;
+    if(code===lastScan)lastScanAt=Date.now();
+  },650);
+}
+function askPrice(name,last){
+  return new Promise(resolve=>{
+    priceResolve=resolve;priceProduct=name;priceLast=Number(last)||0;
+    document.getElementById("priceTitle").textContent="Add "+name;
+    document.getElementById("priceText").textContent=priceLast?"Last price: $"+priceLast.toFixed(2)+"\n\nEnter the current price, or leave blank to use the last price.":"Enter the current price. A price is required for a new scanned product.";
+    const input=document.getElementById("priceInput");input.value=priceLast?priceLast.toFixed(2):"";
+    document.getElementById("priceModal").classList.remove("hidden");
+    setTimeout(()=>{input.focus();input.select()},50);
+  });
+}
+function confirmPrice(){
+  if(!priceResolve)return;
+  const input=document.getElementById("priceInput");
+  const raw=String(input.value||"").trim().replace(/[$,]/g,"");
+  let value;
+  if(raw===""){
+    if(Number(priceLast)>0){
+      value=Math.round(Number(priceLast)*100)/100;
+    }else{
+      input.focus();
+      input.placeholder="Enter a price";
+      return;
+    }
+  }else{
+    const parsed=Number.parseFloat(raw);
+    if(!Number.isFinite(parsed)||parsed<0){
+      input.focus();
+      input.select();
+      return;
+    }
+    value=Math.round(parsed*100)/100;
+  }
+  const resolve=priceResolve;
+  priceResolve=null;priceProduct=null;priceLast=0;
+  document.getElementById("priceModal").classList.add("hidden");
+  resolve(value);
+}
+function cancelPrice(){
+  if(!priceResolve)return;
+  const resolve=priceResolve;priceResolve=null;priceProduct=null;priceLast=0;
+  document.getElementById("priceModal").classList.add("hidden");resolve(null);
+}
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&priceResolve)confirmPrice();if(e.key==="Escape"&&priceResolve)cancelPrice()});
+async function lookupOFF(code){
+  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),7000);
+  try{
+    const res=await fetch("https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json",{headers:{Accept:"application/json"},signal:controller.signal,cache:"no-store"});
+    if(!res.ok)return null;const d=await res.json();return d.status===1&&d.product?d.product:null;
+  }finally{clearTimeout(timeout)}
+}
+function categoryFor(p){
+  const tags=((p.categories_tags||[]).join(" ")+" "+(p.categories||"")).toLowerCase();
+  if(/fruit|vegetable/.test(tags))return "Fruit & Veg";
+  if(/meat|chicken|beef|pork|fish/.test(tags))return "Meat";
+  if(/dairy|milk|cheese|yogurt|yoghurt/.test(tags))return "Dairy";
+  if(/bread|bakery/.test(tags))return "Bakery";
+  if(/frozen/.test(tags))return "Frozen";
+  if(/drink|beverage|water|juice/.test(tags))return "Drinks";
+  if(/household|cleaning|paper|hygiene/.test(tags))return "Household";
+  if(/confectionery|chocolate|candy|sweets|sweet/.test(tags))return "Confectionery";
+  if(/personal care|cosmetic|shaving|sunscreen|skin care|skincare/.test(tags))return "Personal Care";
+  if(/pasta|rice|cereal|sauce|snack|pantry|canned/.test(tags))return "Pantry";
+  return "Other";
+}
+
+function addScannedProduct(code,name,cat,priceValue,b){
+  const numericPrice=Math.round((Number(priceValue)||0)*100)/100;
+  const item={id:Date.now()+Math.random(),name:String(name),cat:cat||"Other",price:numericPrice,done:false,barcode:code};
+  items.push(item);
+  b[code]={...(b[code]||{}),name:item.name,cat:item.cat,lastPrice:numericPrice};
+  localStorage.setItem(BARKEY,JSON.stringify(b));
+  localStorage.setItem(KEY,JSON.stringify(items));
+  render();
+  setScanStatus("Added "+item.name+" — $"+numericPrice.toFixed(2)+". Point the camera at the next barcode…");
+}
+
+async function handleBarcode(code){
+  setScanStatus("Barcode "+code+" found…");
+  const b=getBarcodes();
+  const builtIn={
+    "5025970023243":{name:"NIVEA MEN Sensitive Shaving Gel 200mL",cat:"Personal Care"},
+    "4005900435699":{name:"NIVEA Protect & Moisture Sunscreen SPF50+ 300mL",cat:"Personal Care"},
+     "9300617065074":{name:"Cadbury Dairy Milk Top Deck 180g",cat:"Confectionery"}
+  };
+  // Built-in product data is authoritative for known barcodes. This also
+  // repairs older saved entries that may have the wrong category (for example
+  // an earlier version saved Top Deck as Other). Preserve the user's last price.
+  if(builtIn[code]){
+    const old=b[code]||{};
+    b[code]={...old,...builtIn[code],lastPrice:Number(old.lastPrice)||0};
+    localStorage.setItem(BARKEY,JSON.stringify(b));
+  }
+
+  if(b[code]){
+    const p=b[code],pr=await askPrice(p.name,p.lastPrice||0);
+    if(pr===null){finishScan("Scan cancelled. Point the camera at another barcode…");return}
+    addScannedProduct(code,p.name,p.cat,pr,b);
+    finishScan("Added "+p.name+" — $"+Number(pr).toFixed(2)+". Point the camera at the next barcode…");return;
+  }
+
+  try{
+    setScanStatus("Looking up product…");
+    const p=await lookupOFF(code);
+    if(p){
+      const name=p.product_name||p.product_name_en||p.generic_name||("Barcode "+code),cat=categoryFor(p);
+       const catSelect=document.getElementById("cat");
+       if(catSelect)catSelect.value=cat;
+       document.querySelectorAll(".catChip").forEach(x=>x.classList.toggle("active",x.getAttribute("data-cat")===cat));
+       const pr=await askPrice(name,0);
+      if(pr===null){finishScan("Scan cancelled. Point the camera at another barcode…");return}
+      addScannedProduct(code,name,cat,pr,b);
+      finishScan("Added "+name+" — $"+Number(pr).toFixed(2)+". Point the camera at the next barcode…");return;
+    }
+    pendingBarcode=code;
+    const input=document.getElementById("itemInput");input.value="";input.focus();
+    alert("Barcode "+code+" was scanned, but the product database could not find it. Enter the product name in the item box and press +. This barcode will then be remembered.");
+    finishScan("Barcode saved temporarily. Enter the product name below and press +.");
+  }catch(e){
+    console.error("Product lookup error",e);
+    pendingBarcode=code;
+    const input=document.getElementById("itemInput");input.value="";input.focus();
+    alert("Barcode "+code+" was scanned, but the online product lookup is unavailable. Enter the product name in the item box and press +. This barcode will then be remembered.");
+    finishScan("Enter the product name below and press + to save this barcode.");
+  }
+}
+async function shareList(){let text="My Grocery List\n"+items.filter(i=>!i.done).map(i=>"- "+i.name+(i.price?" $"+Number(i.price).toFixed(2):"")).join("\n");if(navigator.share){try{await navigator.share({title:"My Grocery List",text})}catch(e){}}else{try{await navigator.clipboard.writeText(text);alert("List copied.")}catch(e){}}}
+// Repair known products and restore prices that were already remembered by barcode.
+(function repairKnownProducts(){
+  const builtIn={
+    "5025970023243":{name:"NIVEA MEN Sensitive Shaving Gel 200mL",cat:"Personal Care"},
+    "4005900435699":{name:"NIVEA Protect & Moisture Sunscreen SPF50+ 300mL",cat:"Personal Care"},
+    "9300617065074":{name:"Cadbury Dairy Milk Top Deck 180g",cat:"Confectionery"}
+  };
+  const b=getBarcodes();
+  let changed=false;
+  items.forEach(i=>{
+    if(i.barcode&&builtIn[i.barcode]){
+      if(i.name!==builtIn[i.barcode].name){i.name=builtIn[i.barcode].name;changed=true}
+      if(i.cat!==builtIn[i.barcode].cat){i.cat=builtIn[i.barcode].cat;changed=true}
+      const remembered=Number(b[i.barcode]?.lastPrice)||0;
+      if((Number(i.price)||0)===0 && remembered>0){i.price=remembered;changed=true}
+      else if((Number(i.price)||0)===0 && remembered>0){i.price=remembered;changed=true}
+    }else if(i.barcode){
+      const remembered=Number(b[i.barcode]?.lastPrice)||0;
+      if((Number(i.price)||0)===0 && remembered>0){i.price=remembered;changed=true}
+    }
+  });
+  if(changed)localStorage.setItem(KEY,JSON.stringify(items));
+})();
+render();
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+</script></body></html>
